@@ -1,0 +1,1 @@
+export { getUserProfile } from "./profile.service";
