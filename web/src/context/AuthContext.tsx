@@ -1,41 +1,44 @@
-import React, { useEffect, useState, useContext } from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import { onAuthStateChanged, getAuth, User, Auth } from "firebase/auth";
 import firebase_app from "@/firebase/config";
 
 const auth: Auth = getAuth(firebase_app);
 
 type AuthContextType = {
-  user: User | null;
+    user: User | null;
 };
 
-export const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = React.createContext<AuthContextType | undefined>(
+    undefined
+);
 
-export const useAuthContext = (): AuthContextType | undefined => useContext(AuthContext);
+export const useAuthContext = (): AuthContextType | undefined =>
+    React.useContext(AuthContext);
 
 type AuthContextProviderProps = {
-  children: React.ReactNode;
+    children: React.ReactNode;
 };
 
-export const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export const AuthContextProvider: React.FC<AuthContextProviderProps> = ({
+    children,
+}) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser(user);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+            setLoading(false);
+        });
 
-    return () => unsubscribe();
-  }, []);
+        return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-  return (
-    <AuthContext.Provider value={{ user }}>
-      {loading ? <div>Loading...</div> : children}
-    </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider value={{ user }}>
+            {loading ? <div>Loading...</div> : children}
+        </AuthContext.Provider>
+    );
 };
