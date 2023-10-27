@@ -15,11 +15,9 @@ function Page() {
     const { result, error } = await signIn(email, password);
 
     if (error) {
-      return console.log(error);
+      return console.error(error);
     }
 
-    // else successful
-    console.log(result);
     return router.push("/profile");
   };
   return (

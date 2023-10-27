@@ -23,16 +23,10 @@ function Page() {
             case "auth/email-already-in-use":
                 setError("Email is already in use.");
                 break;
-            case "":
-                
-
             default:
                 break;
         }
 
-
-        // else successful
-        console.log(result);
         return router.push("/profile");
     };
     return (
