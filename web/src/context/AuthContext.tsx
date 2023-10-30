@@ -1,12 +1,23 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { onAuthStateChanged, getAuth, User, Auth } from "firebase/auth";
+import {
+    onAuthStateChanged,
+    getAuth,
+    User,
+    Auth,
+    updateProfile,
+} from "firebase/auth";
 import firebase_app from "@/firebase/config";
 
 const auth: Auth = getAuth(firebase_app);
 
 type AuthContextType = {
     user: User | null;
+};
+
+type FirebaseUserProfile = {
+    displayName: string;
+    photoUrl: string;
 };
 
 export const AuthContext = React.createContext<AuthContextType | undefined>(
@@ -33,12 +44,16 @@ export const AuthContextProvider: React.FC<AuthContextProviderProps> = ({
         });
 
         return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
         <AuthContext.Provider value={{ user }}>
-            {loading ? <div>Loading...</div> : children}
+            {loading ? <></> : children}
         </AuthContext.Provider>
     );
+};
+
+export const updateUserProfile = (user: User, profile: FirebaseUserProfile) => {
+    return updateProfile(user, profile);
 };
