@@ -12,17 +12,27 @@ function Page() {
 
     React.useEffect(() => {
         if (user == null) router.push("/");
+
+        const fetchData = async () => {
+            try {
+                const { currentUser } = user.auth;
+                const token = currentUser && (await currentUser.getIdToken());
+
+                const payloadHeader = {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                };
+                const res = await fetch("http://localhost:3001", payloadHeader);
+                console.log(await res.text());
+            } catch (e) {
+                console.log(e);
+            }
+        };
+
+        fetchData();
     }, [user]);
-
-    const handleLogout = async () => {
-        const { error } = await signOut();
-
-        if (error) {
-            return console.error(error);
-        }
-
-        return router.push("/");
-    };
 
     return (
         <>
@@ -35,12 +45,12 @@ function Page() {
                         height={500}
                         alt="Profile Picture"
                     />
-                    <p className="mt-2 text-gray-600">Display Name: {user.displayName}</p>
-                    {/* <input
+                    <p className="mt-2 text-gray-600">Display Name: {user?.displayName}</p>
+                     <input
                     type="text"
                     className="mt-4 w-full p-2 rounded-md border border-gray-300 focus:ring focus:ring-blue-400"
-                /> */}
-                    <p className="mt-2 text-gray-600">Email: {user.email}</p>
+                /> *
+                    <p className="mt-2 text-gray-600">Email: {user?.email}</p>
                 </div>
             </div>
         </>
