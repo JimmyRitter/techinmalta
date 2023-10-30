@@ -1,97 +1,118 @@
 "use client";
 import React, { useState } from "react";
-// import signUp from "@/firebase/auth/signup";
-import signUp from "@/firebase/signup";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Container, CssBaseline, Box, Avatar, Typography, TextField, Button, Grid, Link, Alert } from "@mui/material";
+import signUp from "@/firebase/signup";
 
 function Page() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
+    const [email, setEmail] = React.useState("");
+    const [password, setPassword] = React.useState("");
+    const [confirm, setConfirm] = React.useState("");
+    const [error, setError] = React.useState("");
+
     const router = useRouter();
 
-    const handleForm = async (event: any) => {
+    const handleSubmit = async (event: any) => {
         event.preventDefault();
 
+        setError("");
+        
         const { result, error } = await signUp(email, password);
 
-        switch (error?.code) {
-            case "auth/email-already-in-use":
-                setError("Email is already in use.");
-                break;
-            case "auth/email-already-in-use":
-                setError("Email is already in use.");
-                break;
-            default:
-                break;
+        if (error) {
+            displayErrorMessage(error.code);
+            return console.error(error);
         }
 
         return router.push("/profile");
     };
+
+    const displayErrorMessage = (errorCode: string) => {
+        switch (errorCode) {
+            case "auth/email-already-in-use":
+                setError("Email already in use");
+                break;
+            case "auth/invalid-email":
+                setError("Invalid email");
+                break;
+            case "auth/weak-password":
+                setError("Weak password. Password should be at least 6 characters.");
+                break;
+            default:
+                setError("Unknown error");
+                break;
+        }
+    }
+
     return (
-        <div className="flex justify-center items-center h-screen">
-            <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-                <h1 className="text-2xl font-semibold text-gray-800 mb-6">
+        <Container component="main" maxWidth="xs">
+            <CssBaseline />
+            <Box
+                sx={{
+                    marginTop: 8,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}
+            >
+                <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+                </Avatar>
+                <Typography component="h1" variant="h5">
                     Sign up
-                </h1>
-                <form onSubmit={handleForm} className="space-y-4">
-                    <div className="relative">
-                        <label
-                            htmlFor="email"
-                            className="block text-gray-700 font-medium"
-                        >
-                            Email
-                        </label>
-                        <input
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            type="email"
-                            name="email"
-                            id="email"
-                            placeholder="example@mail.com"
-                            className="w-full px-4 py-2 mt-1 text-gray-700 border rounded-lg focus:ring focus:ring-blue-300 focus:outline-none"
-                        />
-                    </div>
-                    <div className="relative">
-                        <label
-                            htmlFor="password"
-                            className="block text-gray-700 font-medium"
-                        >
-                            Password
-                        </label>
-                        <input
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            type="password"
-                            name="password"
-                            id="password"
-                            placeholder="password"
-                            className="w-full px-4 py-2 mt-1 text-gray-700 border rounded-lg focus:ring focus:ring-blue-300 focus:outline-none"
-                        />
-                    </div>
-                    <button
+                </Typography>
+                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+                    {error ? <Alert severity="error" onClose={() => setError("")}>{error}</Alert> : null}
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="email"
+                        label="Email"
+                        name="email"
+                        autoFocus
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        name="password"
+                        label="Password"
+                        type="password"
+                        id="password"
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        name="confirmPassword"
+                        label="Confirm password"
+                        type="password"
+                        id="confirmPassword"
+                        onChange={(e) => setConfirm(e.target.value)}
+                    />
+                    <Button
                         type="submit"
-                        className="w-full py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none"
+                        fullWidth
+                        variant="contained"
+                        sx={{ mt: 3, mb: 2 }}
+                        disabled={!password || (password !== confirm)}
                     >
-                        Sign up
-                    </button>
-                </form>
-
-                {/* Horizontal Line */}
-                <hr className="my-4 border-t border-gray-200" />
-
-                {/* Sign Up Link */}
-                <div className="text-center">
-                    <Link href="/signin">
-                        <span className="text-blue-500 hover:underline">
-                            Already have an account? Click here to Sign In
-                        </span>
-                    </Link>
-                </div>
-            </div>
-        </div>
+                        Sign Up
+                    </Button>
+                    <Grid container>
+                        <Grid item>
+                            <Link href="/sign" variant="body2">
+                                Already have an account? Sign in!
+                            </Link>
+                        </Grid>
+                    </Grid>
+                </Box>
+            </Box>
+        </Container>
     );
+
 }
 
 export default Page;

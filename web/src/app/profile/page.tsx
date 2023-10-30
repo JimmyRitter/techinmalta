@@ -2,7 +2,6 @@
 import React from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import signOut from "@/firebase/signout";
 import Image from "next/image";
 
 function Page() {
@@ -11,7 +10,10 @@ function Page() {
     const [avatar, setAvatar] = React.useState("");
 
     React.useEffect(() => {
-        if (user == null) router.push("/");
+        if (!user) {
+            router.push("/");
+            return;
+        }
 
         const fetchData = async () => {
             try {
@@ -46,10 +48,10 @@ function Page() {
                         alt="Profile Picture"
                     />
                     <p className="mt-2 text-gray-600">Display Name: {user?.displayName}</p>
-                     <input
-                    type="text"
-                    className="mt-4 w-full p-2 rounded-md border border-gray-300 focus:ring focus:ring-blue-400"
-                /> *
+                    <input
+                        type="text"
+                        className="mt-4 w-full p-2 rounded-md border border-gray-300 focus:ring focus:ring-blue-400"
+                    /> *
                     <p className="mt-2 text-gray-600">Email: {user?.email}</p>
                 </div>
             </div>

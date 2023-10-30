@@ -2,82 +2,108 @@
 import React from "react";
 import signIn from "@/firebase/signin";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import {
+  Container, CssBaseline, Box, Avatar,
+  Typography, TextField, Button, Grid, Link, Alert
+} from "@mui/material";
 
 function Page() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState("");
   const router = useRouter();
 
-  const handleForm = async (event: any) => {
+  const handleSubmit = async (event: any) => {
     event.preventDefault();
 
     const { result, error } = await signIn(email, password);
 
     if (error) {
+      displayErrorMessage(error.code);
       return console.error(error);
     }
 
     return router.push("/profile");
   };
+
+  const displayErrorMessage = (errorCode: string) => {
+    switch (errorCode) {
+      case "auth/invalid-login-credentials":
+        setError("Credentials are invalid");
+        break;
+      case "auth/too-many-requests":
+        setError("Too many requests. Try again later.");
+        break;
+      default:
+        setError("Unknown error");
+        break;
+    }
+  }
+
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">Sign in</h1>
-        <form onSubmit={handleForm} className="space-y-4">
-          <div className="relative">
-            <label htmlFor="email" className="block text-gray-700 font-medium">
-              Email
-            </label>
-            <input
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              type="email"
-              name="email"
-              id="email"
-              placeholder="example@mail.com"
-              className="w-full px-4 py-2 mt-1 text-gray-700 border rounded-lg focus:ring focus:ring-blue-300 focus:outline-none"
-            />
-          </div>
-          <div className="relative">
-            <label
-              htmlFor="password"
-              className="block text-gray-700 font-medium"
-            >
-              Password
-            </label>
-            <input
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              type="password"
-              name="password"
-              id="password"
-              placeholder="password"
-              className="w-full px-4 py-2 mt-1 text-gray-700 border rounded-lg focus:ring focus:ring-blue-300 focus:outline-none"
-            />
-          </div>
-          <button
+    <Container component="main" maxWidth="xs">
+      <CssBaseline />
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+          {/* <LockOutlinedIcon /> */}
+        </Avatar>
+        <Typography component="h1" variant="h5">
+          Sign in
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          {error ? <Alert severity="error" onClose={() => setError("")}>{error}</Alert> : null}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Email"
+            name="email"
+            autoFocus
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Password"
+            type="password"
+            id="password"
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Button
             type="submit"
-            className="w-full py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
           >
-            Sign in
-          </button>
-        </form>
-
-        {/* Horizontal Line */}
-        <hr className="my-4 border-t border-gray-200" />
-
-        {/* Sign Up Link */}
-        <div className="text-center">
-          <Link href="/signup">
-            <span className="text-blue-500 hover:underline">
-              Don't have an account? Sign up
-            </span>
-          </Link>
-        </div>
-      </div>
-    </div>
+            Sign In
+          </Button>
+          <Grid container>
+            <Grid item xs>
+              <Link href="/forgot-password" variant="body2">
+                Forgot password?
+              </Link>
+            </Grid>
+            <Grid item>
+              <Link href="/signup" variant="body2">
+                {"Don't have an account? Sign up"}
+              </Link>
+            </Grid>
+          </Grid>
+        </Box>
+      </Box>
+    </Container>
   );
+
 }
 
 export default Page;
