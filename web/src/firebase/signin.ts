@@ -23,6 +23,9 @@ export default async function signIn(
 
     try {
         result = await signInWithEmailAndPassword(auth, email, password);
+        const { user } = result;
+        const token = user && (await user.getIdToken());
+        localStorage.setItem("token", token || "");
     } catch (e: any) {
         error = e;
     }

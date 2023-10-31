@@ -1,62 +1,188 @@
 "use client";
-import React from "react";
+import React, { createRef } from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { Avatar, Box, Button, Container, Grid, Link, TextField, Typography } from "@mui/material";
+import styled from "@emotion/styled";
+import { UserProfile } from "./profile.types";
+import { ProfileService } from "@/services/Profile";
 
 function Page() {
-    const { user }: any = useAuthContext();
-    const router = useRouter();
-    const [avatar, setAvatar] = React.useState("");
+  const { user }: any = useAuthContext();
+  const router = useRouter();
 
-    React.useEffect(() => {
-        if (!user) {
-            router.push("/");
-            return;
-        }
+  const [avatar, setAvatar] = React.useState(user?.profileUrl || "");
+  const [name, setName] = React.useState(user?.profileUrl || "");
+  const [summary, setSummary] = React.useState(user?.profileUrl || "");
 
-        const fetchData = async () => {
-            try {
-                const { currentUser } = user.auth;
-                const token = currentUser && (await currentUser.getIdToken());
 
-                const payloadHeader = {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                };
-                const res = await fetch("http://localhost:3001", payloadHeader);
-                console.log(await res.text());
-            } catch (e) {
-                console.log(e);
-            }
-        };
+  const BigAvatar = styled(Avatar)`
+    width: 150px;
+    height: 150px;
+    border: 1px solid grey;
+    box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
+  `;
 
-        fetchData();
-    }, [user]);
+  const VisuallyHiddenInput = styled("input")({
+    clip: "rect(0 0 0 0)",
+    clipPath: "inset(50%)",
+    height: 1,
+    overflow: "hidden",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    whiteSpace: "nowrap",
+    width: 1,
+  });
 
-    return (
-        <>
-            <h1>This is your profile page!</h1>
-            <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-                <div className="text-center">
-                    <Image
-                        src={user?.profileUrl || "https://api.dicebear.com/7.x/fun-emoji/jpg?seed=jimmy&size=256"}
-                        width={500}
-                        height={500}
-                        alt="Profile Picture"
-                    />
-                    <p className="mt-2 text-gray-600">Display Name: {user?.displayName}</p>
-                    <input
-                        type="text"
-                        className="mt-4 w-full p-2 rounded-md border border-gray-300 focus:ring focus:ring-blue-400"
-                    /> *
-                    <p className="mt-2 text-gray-600">Email: {user?.email}</p>
-                </div>
-            </div>
-        </>
-    );
+  React.useEffect(() => {
+    if (!user) {
+      router.push("/");
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const result = await ProfileService.getProfile();
+        const { data } = result;
+        setName(data.displayName);
+        // setAvatar(data.profileUrl);
+        // console.log(result);
+        // const { currentUser } = user.auth;
+        // const token = currentUser && (await currentUser.getIdToken());
+
+        // const payloadHeader = {
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //     Authorization: `Bearer ${token}`,
+        //   },
+        // };
+        // const res = await fetch("http://localhost:3001/profile", payloadHeader);
+        // console.log(await res.text());
+      } catch (e) {
+        console.log(e);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleOnChange = (event: any) => {
+    const newImage = event.target?.files?.[0];
+
+    if (newImage) {
+      setAvatar(URL.createObjectURL(newImage));
+    }
+  };
+
+  const handleSubmit = (event: any) => {
+    event.preventDefault();
+    const payload: UserProfile = {
+      displayName: name,
+    };
+    submitForm(payload);
+  };
+
+  const submitForm = async (payload: UserProfile) => {
+    console.log("payload", payload)
+    const result = await ProfileService.updateProfile(payload);
+    const resultx = await ProfileService.getProfile();
+    console.log(result);
+  }
+
+  return (
+    <Container>
+      <h1>Profile</h1>
+
+      <Grid
+        container
+        spacing={2}
+      >
+        <Grid
+          item
+          xs={4}
+        >
+          <BigAvatar src={avatar} />
+          <Button
+            sx={{ mt: "20px" }}
+            component="label"
+            variant="contained"
+          >
+            Change profile picture
+            <VisuallyHiddenInput
+              type="file"
+              onChange={handleOnChange}
+            />
+          </Button>
+        </Grid>
+        {/* Right Column (2/3 of the size) */}
+        <Grid
+          item
+          xs={8}
+        >
+          <Box
+            sx={{
+              marginTop: 8,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              component="h1"
+              variant="h5"
+            >
+              Sign up
+            </Typography>
+            <Box
+              component="form"
+              onSubmit={handleSubmit}
+              sx={{ mt: 1, p: 2 }}
+            >
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="name"
+                label="Name"
+                name="name"
+                onChange={(e) => setName(e.target.value)}
+                value={name}
+              />
+              <TextField
+                margin="normal"
+                fullWidth
+                name="email"
+                label="Email"
+                type="text"
+                id="email"
+                disabled
+                value={user?.auth.currentUser?.email}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="summary"
+                label="Summary"
+                type="text"
+                id="summary"
+                onChange={(e) => setSummary(e.target.value)}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+              >
+                Sign Up
+              </Button>
+            </Box>
+          </Box>
+        </Grid>
+      </Grid>
+    </Container>
+  );
 }
 
 export default Page;

@@ -1,8 +1,10 @@
 "use client";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Container, CssBaseline, Box, Avatar, Typography, TextField, Button, Grid, Link, Alert } from "@mui/material";
-import signUp from "@/firebase/signup";
+import {
+    Container,
+    CssBaseline, Box, Avatar, Typography, TextField, Button, Grid, Link,
+    Alert
+} from "@mui/material";
 import forgotPassword from "@/firebase/forgotPassword";
 
 function Page() {
@@ -10,7 +12,9 @@ function Page() {
     const [complete, setComplete] = React.useState(false);
 
     const handleSubmit = async (event: any) => {
+        setComplete(false);
         event.preventDefault();
+        await forgotPassword(email);
         setComplete(true);
     };
 
