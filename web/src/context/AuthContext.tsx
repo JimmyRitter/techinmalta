@@ -38,9 +38,15 @@ export const AuthContextProvider: React.FC<AuthContextProviderProps> = ({
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        debugger;
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setUser(user);
             setLoading(false);
+
+            if (user && !localStorage.getItem("token")) {
+                const token = await user.getIdToken(true);
+                localStorage.setItem("token", token || "");
+            }
         });
 
         return () => unsubscribe();

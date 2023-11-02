@@ -6,6 +6,7 @@ import { Avatar, Box, Button, Container, Grid, Link, TextField, Typography } fro
 import styled from "@emotion/styled";
 import { UserProfile } from "./profile.types";
 import { ProfileService } from "@/services/Profile";
+import { getStorage, ref, uploadBytes } from "firebase/storage";
 
 function Page() {
   const { user }: any = useAuthContext();
@@ -14,7 +15,6 @@ function Page() {
   const [avatar, setAvatar] = React.useState(user?.profileUrl || "");
   const [name, setName] = React.useState(user?.profileUrl || "");
   const [summary, setSummary] = React.useState(user?.profileUrl || "");
-
 
   const BigAvatar = styled(Avatar)`
     width: 150px;
@@ -84,11 +84,23 @@ function Page() {
   };
 
   const submitForm = async (payload: UserProfile) => {
-    console.log("payload", payload)
+    console.log("payload", payload);
     const result = await ProfileService.updateProfile(payload);
-    const resultx = await ProfileService.getProfile();
-    console.log(result);
-  }
+    // const resultx = await ProfileService.getProfile();
+
+    // Create a root reference
+    const storage = getStorage();
+    const storageRef = ref(storage, "/profiles");
+
+    // 'file' comes from the Blob or File API
+    uploadBytes(storageRef, avatar)
+      .then((snapshot) => {
+        console.log("Uploaded a blob or file!");
+      })
+      .catch((error) => {
+        console.log("error", error);
+      });
+  };
 
   return (
     <Container>

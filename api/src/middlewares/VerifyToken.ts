@@ -9,7 +9,7 @@ export const VerifyToken = async (
 ) => {
   const token = req?.headers?.authorization?.split(" ")[1] || "";
 
-  if (!token) return res.status(498).json({ message: "No token provided" });
+  if (!token) return res.status(498).json({ message: "No token provided", code: "no-token-provided" });
 
   try {
     const decodeValue: DecodedIdToken = await auth.verifyIdToken(token);
@@ -18,7 +18,10 @@ export const VerifyToken = async (
       (req as any).userUid = decodeValue.uid;
       return next();
     }
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.errorInfo?.code === "auth/id-token-expired") {
+      return res.status(498).json({ message: "Token expired", code: e?.errorInfo?.code });
+    }
     return res.json({ message: "Internal Error" });
   }
 };

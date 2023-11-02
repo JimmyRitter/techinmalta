@@ -24,7 +24,7 @@ export default async function signUp(
     try {
         result = await createUserWithEmailAndPassword(auth, email, password);
         const { user } = result;
-        const token = user && (await user.getIdToken());
+        const token = user && (await user.getIdToken(true));
         localStorage.setItem("token", token || "");
     } catch (e: any) {
         error = e;

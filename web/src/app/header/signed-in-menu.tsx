@@ -2,7 +2,7 @@
 "use client";
 import { useAuthContext } from "@/context/AuthContext";
 import signOut from "@/firebase/signout";
-import { Avatar, Button } from "@mui/material";
+import { Avatar, Box, Button, Link } from "@mui/material";
 import { useRouter } from "next/navigation";
 
 export const SignedInMenu = () => {
@@ -21,6 +21,11 @@ export const SignedInMenu = () => {
 
   return (
     <>
+      <Box sx={{ display: { xs: 'none', sm: 'block' }, marginRight: "15px" }}>
+          <Link sx={{ color: '#fff' }} href={"/profile"}>
+            Profile
+          </Link>
+      </Box>
       <Avatar
         alt={user?.displayName}
         src={user?.profileUrl}
