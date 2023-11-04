@@ -1,20 +1,31 @@
 "use client";
-import React, { createRef } from "react";
+import React from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { Avatar, Box, Button, Container, Grid, Link, TextField, Typography } from "@mui/material";
+import { Avatar, Box, Button, Container, Grid, TextField, Typography, Snackbar } from "@mui/material";
 import styled from "@emotion/styled";
-import { UserProfile } from "./profile.types";
-import { ProfileService } from "@/services/Profile";
-import { getStorage, ref, uploadBytes } from "firebase/storage";
+import { UserProfile, Avatar as AvatarType } from "./profile.types";
+import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
+import { getAuth, updateProfile } from "firebase/auth";
+
 
 function Page() {
   const { user }: any = useAuthContext();
   const router = useRouter();
 
-  const [avatar, setAvatar] = React.useState(user?.profileUrl || "");
-  const [name, setName] = React.useState(user?.profileUrl || "");
+  // const [avatar, setAvatar]
+
+  const avatarInitialState: AvatarType = {
+    file: undefined,
+    url: user?.photoURL || "",
+  };
+
+  const [avatar, setAvatar] = React.useState(avatarInitialState);
+  const [name, setName] = React.useState(user?.displayName || "");
   const [summary, setSummary] = React.useState(user?.profileUrl || "");
+  const [snackbar, setSnackbar] =
+    React.useState({ open: false, message: "" });
+
 
   const BigAvatar = styled(Avatar)`
     width: 150px;
@@ -40,160 +51,186 @@ function Page() {
       router.push("/");
       return;
     }
-
-    const fetchData = async () => {
-      try {
-        const result = await ProfileService.getProfile();
-        const { data } = result;
-        setName(data.displayName);
-        // setAvatar(data.profileUrl);
-        // console.log(result);
-        // const { currentUser } = user.auth;
-        // const token = currentUser && (await currentUser.getIdToken());
-
-        // const payloadHeader = {
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //     Authorization: `Bearer ${token}`,
-        //   },
-        // };
-        // const res = await fetch("http://localhost:3001/profile", payloadHeader);
-        // console.log(await res.text());
-      } catch (e) {
-        console.log(e);
-      }
-    };
-
-    fetchData();
   }, []);
 
   const handleOnChange = (event: any) => {
     const newImage = event.target?.files?.[0];
 
     if (newImage) {
-      setAvatar(URL.createObjectURL(newImage));
+      setAvatar((prevState) => {
+        return {
+          ...prevState,
+          file: newImage,
+          url: URL.createObjectURL(newImage),
+        };
+      });
     }
   };
 
   const handleSubmit = (event: any) => {
+    console.log(avatar);
     event.preventDefault();
     const payload: UserProfile = {
       displayName: name,
     };
+
     submitForm(payload);
   };
 
   const submitForm = async (payload: UserProfile) => {
     console.log("payload", payload);
-    const result = await ProfileService.updateProfile(payload);
-    // const resultx = await ProfileService.getProfile();
+    const auth = getAuth();
+
 
     // Create a root reference
-    const storage = getStorage();
-    const storageRef = ref(storage, "/profiles");
 
-    // 'file' comes from the Blob or File API
-    uploadBytes(storageRef, avatar)
+    const fileExtension = avatar.file?.name.split(".").pop();
+
+    const storage = getStorage();
+    const storageRef = ref(storage, `/profiles/${user?.email}/profile-picture.${fileExtension}`);
+    //
+    uploadBytes(storageRef, avatar.file!)
       .then((snapshot) => {
-        console.log("Uploaded a blob or file!");
+        return getDownloadURL(snapshot.ref);
       })
+      .then(downloadURL => {
+        setSnackbar({ open: true, message: "Profile updated" });
+        console.log("Download URL", downloadURL);
+        return updateProfile(auth.currentUser!, {
+          displayName: name,
+          photoURL: downloadURL,
+          // photoURL: "https://example.com/jane-q-user/profile.jpg",
+        });
+      }).then(() => {
+      setSnackbar({ open: true, message: "Profile updated!" });
+    })
       .catch((error) => {
         console.log("error", error);
       });
+
+
+    //  // if (auth.currentUser) {
+    // updateProfile(auth.currentUser!, {
+    //   displayName: name,
+    //   // photoURL: "https://example.com/jane-q-user/profile.jpg",
+    // }).then(() => {
+    //   setSnackbar({ open: true, message: "Profile updated!" });
+    // }).catch((error: any) => {
+    //   console.log(error);
+    //   setSnackbar({ open: true, message: "Error updating profile!" });
+    // });
+
+
+    // // 'file' comes from the Blob or File API
+    // uploadBytes(storageRef, avatar)
+    //   .then((snapshot) => {
+    //     console.log("Uploaded a blob or file!");
+    //   })
+    //   .catch((error) => {
+    //     console.log("error", error);
+    //   });
   };
 
   return (
-    <Container>
-      <h1>Profile</h1>
+    <>
+      <Container>
+        <h1>Profile</h1>
 
-      <Grid
-        container
-        spacing={2}
-      >
         <Grid
-          item
-          xs={4}
+          container
+          spacing={2}
         >
-          <BigAvatar src={avatar} />
-          <Button
-            sx={{ mt: "20px" }}
-            component="label"
-            variant="contained"
+          <Grid
+            item
+            xs={4}
           >
-            Change profile picture
-            <VisuallyHiddenInput
-              type="file"
-              onChange={handleOnChange}
-            />
-          </Button>
-        </Grid>
-        {/* Right Column (2/3 of the size) */}
-        <Grid
-          item
-          xs={8}
-        >
-          <Box
-            sx={{
-              marginTop: 8,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Typography
-              component="h1"
-              variant="h5"
+            <BigAvatar src={avatar.url} />
+            <Button
+              sx={{ mt: "20px" }}
+              component="label"
+              variant="contained"
             >
-              Sign up
-            </Typography>
+              Change profile picture
+              <VisuallyHiddenInput
+                type="file"
+                onChange={handleOnChange}
+              />
+            </Button>
+          </Grid>
+          {/* Right Column (2/3 of the size) */}
+          <Grid
+            item
+            xs={8}
+          >
             <Box
-              component="form"
-              onSubmit={handleSubmit}
-              sx={{ mt: 1, p: 2 }}
+              sx={{
+                marginTop: 8,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
             >
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="name"
-                label="Name"
-                name="name"
-                onChange={(e) => setName(e.target.value)}
-                value={name}
-              />
-              <TextField
-                margin="normal"
-                fullWidth
-                name="email"
-                label="Email"
-                type="text"
-                id="email"
-                disabled
-                value={user?.auth.currentUser?.email}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="summary"
-                label="Summary"
-                type="text"
-                id="summary"
-                onChange={(e) => setSummary(e.target.value)}
-              />
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+              <Typography
+                component="h1"
+                variant="h5"
               >
-                Sign Up
-              </Button>
+                Profile
+              </Typography>
+              <Box
+                component="form"
+                onSubmit={handleSubmit}
+                sx={{ mt: 1, p: 2 }}
+              >
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="name"
+                  label="Name"
+                  name="name"
+                  onChange={(e) => setName(e.target.value)}
+                  value={name}
+                />
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  name="email"
+                  label="Email"
+                  type="text"
+                  id="email"
+                  disabled
+                  value={user?.auth.currentUser?.email}
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="summary"
+                  label="Summary"
+                  type="text"
+                  id="summary"
+                  onChange={(e) => setSummary(e.target.value)}
+                />
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  sx={{ mt: 3, mb: 2 }}
+                >
+                  Sign Up
+                </Button>
+              </Box>
             </Box>
-          </Box>
+          </Grid>
         </Grid>
-      </Grid>
-    </Container>
+      </Container>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ open: false, message: "" })}
+        message={snackbar.message}
+      />
+    </>
   );
 }
 

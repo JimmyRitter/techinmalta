@@ -21,7 +21,7 @@ export const SignedInMenu = () => {
 
   return (
     <>
-      <Box sx={{ display: { xs: 'none', sm: 'block' }, marginRight: "15px" }}>
+      <Box sx={{ display: { sm: 'block' }, marginRight: "15px" }}>
           <Link sx={{ color: '#fff' }} href={"/profile"}>
             Profile
           </Link>

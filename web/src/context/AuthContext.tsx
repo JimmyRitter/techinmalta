@@ -38,15 +38,9 @@ export const AuthContextProvider: React.FC<AuthContextProviderProps> = ({
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        debugger;
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
             setUser(user);
             setLoading(false);
-
-            if (user && !localStorage.getItem("token")) {
-                const token = await user.getIdToken(true);
-                localStorage.setItem("token", token || "");
-            }
         });
 
         return () => unsubscribe();
@@ -58,8 +52,4 @@ export const AuthContextProvider: React.FC<AuthContextProviderProps> = ({
             {loading ? <></> : children}
         </AuthContext.Provider>
     );
-};
-
-export const updateUserProfile = (user: User, profile: FirebaseUserProfile) => {
-    return updateProfile(user, profile);
 };
