@@ -7,13 +7,14 @@ import styled from "@emotion/styled";
 import { UserProfile, Avatar as AvatarType } from "./profile.types";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { getAuth, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "@firebase/firestore";
+import { getFirestore } from "firebase/firestore";
+import { getUserProfile } from "@/app/profile/profile.services";
 
 
 function Page() {
   const { user }: any = useAuthContext();
   const router = useRouter();
-
-  // const [avatar, setAvatar]
 
   const avatarInitialState: AvatarType = {
     file: undefined,
@@ -22,9 +23,10 @@ function Page() {
 
   const [avatar, setAvatar] = React.useState(avatarInitialState);
   const [name, setName] = React.useState(user?.displayName || "");
-  const [summary, setSummary] = React.useState(user?.profileUrl || "");
   const [snackbar, setSnackbar] =
     React.useState({ open: false, message: "" });
+  const [userProfile, setUserProfile] =
+    React.useState<UserProfile | undefined>(undefined);
 
 
   const BigAvatar = styled(Avatar)`
@@ -51,6 +53,16 @@ function Page() {
       router.push("/");
       return;
     }
+
+    getUserProfile(user)
+      .then((profile) => {
+        setUserProfile(profile);
+        console.log(profile);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+
   }, []);
 
   const handleOnChange = (event: any) => {
@@ -72,23 +84,22 @@ function Page() {
     event.preventDefault();
     const payload: UserProfile = {
       displayName: name,
+      summary: userProfile?.summary || "",
+      skills: [],
     };
 
     submitForm(payload);
   };
 
   const submitForm = async (payload: UserProfile) => {
-    console.log("payload", payload);
     const auth = getAuth();
-
-
-    // Create a root reference
 
     const fileExtension = avatar.file?.name.split(".").pop();
 
     const storage = getStorage();
     const storageRef = ref(storage, `/profiles/${user?.email}/profile-picture.${fileExtension}`);
-    //
+
+    // update profile picture and name
     uploadBytes(storageRef, avatar.file!)
       .then((snapshot) => {
         return getDownloadURL(snapshot.ref);
@@ -108,27 +119,14 @@ function Page() {
         console.log("error", error);
       });
 
+    const db = getFirestore();
 
-    //  // if (auth.currentUser) {
-    // updateProfile(auth.currentUser!, {
-    //   displayName: name,
-    //   // photoURL: "https://example.com/jane-q-user/profile.jpg",
-    // }).then(() => {
-    //   setSnackbar({ open: true, message: "Profile updated!" });
-    // }).catch((error: any) => {
-    //   console.log(error);
-    //   setSnackbar({ open: true, message: "Error updating profile!" });
-    // });
-
-
-    // // 'file' comes from the Blob or File API
-    // uploadBytes(storageRef, avatar)
-    //   .then((snapshot) => {
-    //     console.log("Uploaded a blob or file!");
-    //   })
-    //   .catch((error) => {
-    //     console.log("error", error);
-    //   });
+    try {
+      const docRef = await setDoc(doc(db, "users", user.email), payload);
+      console.log("Document written with ID: ", docRef);
+    } catch (e) {
+      console.error("Error adding document: ", e);
+    }
   };
 
   return (
@@ -209,7 +207,14 @@ function Page() {
                   label="Summary"
                   type="text"
                   id="summary"
-                  onChange={(e) => setSummary(e.target.value)}
+                  value={userProfile?.summary || ""}
+                  onChange={(e) => setUserProfile((prevState) => {
+                    return {
+                      ...prevState,
+                      summary: e.target.value || "",
+                    } as UserProfile; 
+                  })}
+                  // onChange={(e) => setUserProfile()}
                 />
                 <Button
                   type="submit"
