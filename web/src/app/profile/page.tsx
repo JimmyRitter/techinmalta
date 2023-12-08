@@ -2,7 +2,13 @@
 import React from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { Avatar, Box, Button, Container, Grid, TextField, Typography, Snackbar } from "@mui/material";
+import {
+  Avatar, Box,
+  Button, Container,
+  Grid, TextField,
+  Typography, Snackbar,
+  ListItem, Chip,
+} from "@mui/material";
 import styled from "@emotion/styled";
 import { UserProfile, Avatar as AvatarType } from "./profile.types";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
@@ -10,6 +16,7 @@ import { getAuth, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "@firebase/firestore";
 import { getFirestore } from "firebase/firestore";
 import { getUserProfile } from "@/app/profile/profile.services";
+import WorkExperiences from "@/app/profile/workExperiences";
 
 
 function Page() {
@@ -27,7 +34,6 @@ function Page() {
     React.useState({ open: false, message: "" });
   const [userProfile, setUserProfile] =
     React.useState<UserProfile | undefined>(undefined);
-
 
   const BigAvatar = styled(Avatar)`
     width: 150px;
@@ -86,6 +92,8 @@ function Page() {
       displayName: name,
       summary: userProfile?.summary || "",
       skills: [],
+      linkedinUrl: userProfile?.linkedinUrl || "",
+      workExperiences: userProfile?.workExperiences || [],
     };
 
     submitForm(payload);
@@ -99,34 +107,45 @@ function Page() {
     const storage = getStorage();
     const storageRef = ref(storage, `/profiles/${user?.email}/profile-picture.${fileExtension}`);
 
-    // update profile picture and name
-    uploadBytes(storageRef, avatar.file!)
-      .then((snapshot) => {
-        return getDownloadURL(snapshot.ref);
-      })
-      .then(downloadURL => {
-        setSnackbar({ open: true, message: "Profile updated" });
-        console.log("Download URL", downloadURL);
-        return updateProfile(auth.currentUser!, {
-          displayName: name,
-          photoURL: downloadURL,
-          // photoURL: "https://example.com/jane-q-user/profile.jpg",
-        });
-      }).then(() => {
-      setSnackbar({ open: true, message: "Profile updated!" });
-    })
-      .catch((error) => {
-        console.log("error", error);
-      });
+    try {
+
+
+      let downloadURL = "";
+      let updateProfilePayload = {
+        displayName: name,
+        ...(avatar.file) && { photoURL: "" },
+      };
+
+      if (avatar.file) {
+        const uploadSnapshot = await uploadBytes(storageRef, avatar.file);
+        downloadURL = await getDownloadURL(uploadSnapshot.ref);
+        updateProfilePayload.photoURL = downloadURL;
+      }
+
+      await updateProfile(auth.currentUser!, updateProfilePayload);
+      setSnackbar({ open: true, message: "Profile updated" });
+    } catch (e) {
+      console.error(e);
+      setSnackbar({ open: true, message: "Something went wrong" });
+    }
 
     const db = getFirestore();
 
     try {
-      const docRef = await setDoc(doc(db, "users", user.email), payload);
-      console.log("Document written with ID: ", docRef);
+      await setDoc(doc(db, "users", user.email), payload);
+      console.log("DB Updated");
     } catch (e) {
       console.error("Error adding document: ", e);
     }
+  };
+
+  const handleRemoveSkillChip = (skill: string): void => {
+    setUserProfile((prevState) => {
+      return {
+        ...prevState,
+        skills: prevState?.skills.filter((s) => s !== skill),
+      } as UserProfile;
+    });
   };
 
   return (
@@ -136,7 +155,6 @@ function Page() {
 
         <Grid
           container
-          spacing={2}
         >
           <Grid
             item
@@ -162,18 +180,11 @@ function Page() {
           >
             <Box
               sx={{
-                marginTop: 8,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
               }}
             >
-              <Typography
-                component="h1"
-                variant="h5"
-              >
-                Profile
-              </Typography>
               <Box
                 component="form"
                 onSubmit={handleSubmit}
@@ -201,28 +212,53 @@ function Page() {
                 />
                 <TextField
                   margin="normal"
+                  multiline
+                  rows={4}
                   required
                   fullWidth
                   name="summary"
                   label="Summary"
                   type="text"
                   id="summary"
-                  value={userProfile?.summary || ""}
+                  value={userProfile?.summary ?? ""}
                   onChange={(e) => setUserProfile((prevState) => {
                     return {
                       ...prevState,
                       summary: e.target.value || "",
-                    } as UserProfile; 
+                    } as UserProfile;
                   })}
-                  // onChange={(e) => setUserProfile()}
                 />
+                {userProfile?.skills?.map((skill) => (
+                  <ListItem key={skill}>
+                    <Chip label={skill}
+                          onDelete={() => handleRemoveSkillChip(skill)}
+                    />
+                  </ListItem>
+                ))}
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  name="linkedinUrl"
+                  label="LinkedIn"
+                  type="text"
+                  id="linkedinUrl"
+                  value={userProfile?.linkedinUrl ?? ""}
+                  onChange={(e) => setUserProfile((prevState) => {
+                    return {
+                      ...prevState,
+                      linkedinUrl: e.target.value || "",
+                    } as UserProfile;
+                  })}
+                />
+                <WorkExperiences defaultExperiences={userProfile?.workExperiences ?? []} />
+                
                 <Button
                   type="submit"
                   fullWidth
                   variant="contained"
                   sx={{ mt: 3, mb: 2 }}
                 >
-                  Sign Up
+                  Save
                 </Button>
               </Box>
             </Box>

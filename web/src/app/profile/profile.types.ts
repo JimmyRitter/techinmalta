@@ -1,12 +1,12 @@
-type JobExperience = {
+export type WorkExperience = {
   companyName: string,
   position: string,
-  startDate: Date,
-  endDate: Date,
-  description: string,
+  startDate: string,
+  endDate: string,
+  summary: string,
 }
 
-type Education = {
+export type Education = {
   schoolName: string,
   degree: string,
   startDate: Date,
@@ -14,7 +14,7 @@ type Education = {
   description: string,
 }
 
-type Courses = {
+export type Courses = {
   name: string,
   description: string,
   url: string,
@@ -24,7 +24,8 @@ export type UserProfile = {
   displayName: string,
   summary: string,
   skills: string[],
-  // jobExperiences: JobExperience[],
+  linkedinUrl: string,
+  workExperiences: WorkExperience[],
   // education: Education[],
   // courses: Courses[],
 }
