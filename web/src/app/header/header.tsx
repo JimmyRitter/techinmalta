@@ -26,6 +26,9 @@ const Header: React.FC<HeaderProps> = () => {
             Tech in Malta
           </Link>
         </Typography>
+        <Typography>
+          user: {user?.displayName || "not logged in"}
+        </Typography>
         {user ? <SignedInMenu /> : null}
         {!user ? <SignedOffMenu /> : null}
       </Toolbar>

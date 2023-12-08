@@ -1,20 +1,39 @@
 "use client";
-import React, { createRef } from "react";
+import React from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { Avatar, Box, Button, Container, Grid, Link, TextField, Typography } from "@mui/material";
+import {
+  Avatar, Box,
+  Button, Container,
+  Grid, TextField,
+  Typography, Snackbar,
+  ListItem, Chip,
+} from "@mui/material";
 import styled from "@emotion/styled";
-import { UserProfile } from "./profile.types";
-import { ProfileService } from "@/services/Profile";
-import { getStorage, ref, uploadBytes } from "firebase/storage";
+import { UserProfile, Avatar as AvatarType } from "./profile.types";
+import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
+import { getAuth, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "@firebase/firestore";
+import { getFirestore } from "firebase/firestore";
+import { getUserProfile } from "@/app/profile/profile.services";
+import WorkExperiences from "@/app/profile/workExperiences";
+
 
 function Page() {
   const { user }: any = useAuthContext();
   const router = useRouter();
 
-  const [avatar, setAvatar] = React.useState(user?.profileUrl || "");
-  const [name, setName] = React.useState(user?.profileUrl || "");
-  const [summary, setSummary] = React.useState(user?.profileUrl || "");
+  const avatarInitialState: AvatarType = {
+    file: undefined,
+    url: user?.photoURL || "",
+  };
+
+  const [avatar, setAvatar] = React.useState(avatarInitialState);
+  const [name, setName] = React.useState(user?.displayName || "");
+  const [snackbar, setSnackbar] =
+    React.useState({ open: false, message: "" });
+  const [userProfile, setUserProfile] =
+    React.useState<UserProfile | undefined>(undefined);
 
   const BigAvatar = styled(Avatar)`
     width: 150px;
@@ -41,159 +60,218 @@ function Page() {
       return;
     }
 
-    const fetchData = async () => {
-      try {
-        const result = await ProfileService.getProfile();
-        const { data } = result;
-        setName(data.displayName);
-        // setAvatar(data.profileUrl);
-        // console.log(result);
-        // const { currentUser } = user.auth;
-        // const token = currentUser && (await currentUser.getIdToken());
+    getUserProfile(user)
+      .then((profile) => {
+        setUserProfile(profile);
+        console.log(profile);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
 
-        // const payloadHeader = {
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //     Authorization: `Bearer ${token}`,
-        //   },
-        // };
-        // const res = await fetch("http://localhost:3001/profile", payloadHeader);
-        // console.log(await res.text());
-      } catch (e) {
-        console.log(e);
-      }
-    };
-
-    fetchData();
   }, []);
 
   const handleOnChange = (event: any) => {
     const newImage = event.target?.files?.[0];
 
     if (newImage) {
-      setAvatar(URL.createObjectURL(newImage));
+      setAvatar((prevState) => {
+        return {
+          ...prevState,
+          file: newImage,
+          url: URL.createObjectURL(newImage),
+        };
+      });
     }
   };
 
   const handleSubmit = (event: any) => {
+    console.log(avatar);
     event.preventDefault();
     const payload: UserProfile = {
       displayName: name,
+      summary: userProfile?.summary || "",
+      skills: [],
+      linkedinUrl: userProfile?.linkedinUrl || "",
+      workExperiences: userProfile?.workExperiences || [],
     };
+
     submitForm(payload);
   };
 
   const submitForm = async (payload: UserProfile) => {
-    console.log("payload", payload);
-    const result = await ProfileService.updateProfile(payload);
-    // const resultx = await ProfileService.getProfile();
+    const auth = getAuth();
 
-    // Create a root reference
+    const fileExtension = avatar.file?.name.split(".").pop();
+
     const storage = getStorage();
-    const storageRef = ref(storage, "/profiles");
+    const storageRef = ref(storage, `/profiles/${user?.email}/profile-picture.${fileExtension}`);
 
-    // 'file' comes from the Blob or File API
-    uploadBytes(storageRef, avatar)
-      .then((snapshot) => {
-        console.log("Uploaded a blob or file!");
-      })
-      .catch((error) => {
-        console.log("error", error);
-      });
+    try {
+
+
+      let downloadURL = "";
+      let updateProfilePayload = {
+        displayName: name,
+        ...(avatar.file) && { photoURL: "" },
+      };
+
+      if (avatar.file) {
+        const uploadSnapshot = await uploadBytes(storageRef, avatar.file);
+        downloadURL = await getDownloadURL(uploadSnapshot.ref);
+        updateProfilePayload.photoURL = downloadURL;
+      }
+
+      await updateProfile(auth.currentUser!, updateProfilePayload);
+      setSnackbar({ open: true, message: "Profile updated" });
+    } catch (e) {
+      console.error(e);
+      setSnackbar({ open: true, message: "Something went wrong" });
+    }
+
+    const db = getFirestore();
+
+    try {
+      await setDoc(doc(db, "users", user.email), payload);
+      console.log("DB Updated");
+    } catch (e) {
+      console.error("Error adding document: ", e);
+    }
+  };
+
+  const handleRemoveSkillChip = (skill: string): void => {
+    setUserProfile((prevState) => {
+      return {
+        ...prevState,
+        skills: prevState?.skills.filter((s) => s !== skill),
+      } as UserProfile;
+    });
   };
 
   return (
-    <Container>
-      <h1>Profile</h1>
+    <>
+      <Container>
+        <h1>Profile</h1>
 
-      <Grid
-        container
-        spacing={2}
-      >
         <Grid
-          item
-          xs={4}
+          container
         >
-          <BigAvatar src={avatar} />
-          <Button
-            sx={{ mt: "20px" }}
-            component="label"
-            variant="contained"
+          <Grid
+            item
+            xs={4}
           >
-            Change profile picture
-            <VisuallyHiddenInput
-              type="file"
-              onChange={handleOnChange}
-            />
-          </Button>
-        </Grid>
-        {/* Right Column (2/3 of the size) */}
-        <Grid
-          item
-          xs={8}
-        >
-          <Box
-            sx={{
-              marginTop: 8,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Typography
-              component="h1"
-              variant="h5"
+            <BigAvatar src={avatar.url} />
+            <Button
+              sx={{ mt: "20px" }}
+              component="label"
+              variant="contained"
             >
-              Sign up
-            </Typography>
+              Change profile picture
+              <VisuallyHiddenInput
+                type="file"
+                onChange={handleOnChange}
+              />
+            </Button>
+          </Grid>
+          {/* Right Column (2/3 of the size) */}
+          <Grid
+            item
+            xs={8}
+          >
             <Box
-              component="form"
-              onSubmit={handleSubmit}
-              sx={{ mt: 1, p: 2 }}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
             >
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="name"
-                label="Name"
-                name="name"
-                onChange={(e) => setName(e.target.value)}
-                value={name}
-              />
-              <TextField
-                margin="normal"
-                fullWidth
-                name="email"
-                label="Email"
-                type="text"
-                id="email"
-                disabled
-                value={user?.auth.currentUser?.email}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="summary"
-                label="Summary"
-                type="text"
-                id="summary"
-                onChange={(e) => setSummary(e.target.value)}
-              />
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+              <Box
+                component="form"
+                onSubmit={handleSubmit}
+                sx={{ mt: 1, p: 2 }}
               >
-                Sign Up
-              </Button>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="name"
+                  label="Name"
+                  name="name"
+                  onChange={(e) => setName(e.target.value)}
+                  value={name}
+                />
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  name="email"
+                  label="Email"
+                  type="text"
+                  id="email"
+                  disabled
+                  value={user?.auth.currentUser?.email}
+                />
+                <TextField
+                  margin="normal"
+                  multiline
+                  rows={4}
+                  required
+                  fullWidth
+                  name="summary"
+                  label="Summary"
+                  type="text"
+                  id="summary"
+                  value={userProfile?.summary ?? ""}
+                  onChange={(e) => setUserProfile((prevState) => {
+                    return {
+                      ...prevState,
+                      summary: e.target.value || "",
+                    } as UserProfile;
+                  })}
+                />
+                {userProfile?.skills?.map((skill) => (
+                  <ListItem key={skill}>
+                    <Chip label={skill}
+                          onDelete={() => handleRemoveSkillChip(skill)}
+                    />
+                  </ListItem>
+                ))}
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  name="linkedinUrl"
+                  label="LinkedIn"
+                  type="text"
+                  id="linkedinUrl"
+                  value={userProfile?.linkedinUrl ?? ""}
+                  onChange={(e) => setUserProfile((prevState) => {
+                    return {
+                      ...prevState,
+                      linkedinUrl: e.target.value || "",
+                    } as UserProfile;
+                  })}
+                />
+                <WorkExperiences defaultExperiences={userProfile?.workExperiences ?? []} />
+                
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  sx={{ mt: 3, mb: 2 }}
+                >
+                  Save
+                </Button>
+              </Box>
             </Box>
-          </Box>
+          </Grid>
         </Grid>
-      </Grid>
-    </Container>
+      </Container>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ open: false, message: "" })}
+        message={snackbar.message}
+      />
+    </>
   );
 }
 
